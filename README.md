@@ -10,9 +10,9 @@ npm run dev
 ```
 * Connect your wallet to Sepolia testnet and get some ETH from Sepolia faucet https://sepoliafaucet.com/
 ## Functions
-- creates a smart wallet for a user. A user can only create one wallet
-- allows created wallets to be funded from an EOA
-- transfers ETH to an existing wallet address
+- creates a smart wallet for a user using EIP1337. Users could create many wallets as they wish. On wallet creation, the user is required a input the wallet serial number for identification. Serial number could be 0 or 1 or 2 etc
+- allows created wallets to be funded with ETH. It requires the address of the wallet that is to be funded
+- gets the balance of a wallet. It requires the account's seiral number to be inputed.
 
 ## Author
 Joshua Iluma

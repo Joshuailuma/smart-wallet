@@ -15,6 +15,8 @@ export default function Home() {
   const web3ModalRef = useRef();
   // Check if wallet is connected or not
   const [walletConnected, setWalletConnected] = useState(false);
+  // current  metamask address
+  const [currentAddress, setCurrentAddress] = useState("");
 
   // the variable is used to invoke loader
   const [storeLoader, setStoreLoader] = useState(false)
@@ -22,10 +24,14 @@ export default function Home() {
 
   // Address of the receiver
   const [receiver, setReceiver] = useState("");
-  // Amount to send
-  const [amountToSend, setAmountToSend] = useState(0);
+  // Address of account to fund
+  const [accountToFund, setAccountToFund] = useState("");
+
+  // Amount to fund address with
   const [amountToFund, setAmountToFund] = useState(0);
+  const [serialNumber, setAccountSerialNumber] = useState(0);
   const [currentBalance, setCurrentBalance] = useState(0);
+  const [accountToGet, setAccountToGet] = useState("");
 
 
   useEffect(() => {
@@ -39,7 +45,7 @@ export default function Home() {
         disableInjectedProvider: false,
       });
       connectWallet();
-      getBalance();
+      getCurrentAddress()
     }
   }, [walletConnected]);
 
@@ -50,6 +56,7 @@ export default function Home() {
     const provider = await web3ModalRef.current.connect();
 
     const web3Provider = new ethers.BrowserProvider(provider);
+    setProvider(web3Provider)
 
     // If user is not connected to the Goerli network, let them know and throw an error
     const { chainId } = await web3Provider.getNetwork();
@@ -80,39 +87,37 @@ export default function Home() {
     }
   };
 
-
+  // Get the current address of a
+  const getCurrentAddress = async () => {
+    const signer = await getProviderOrSigner(true);
+    setCurrentAddress(signer.address);
+  }
 
   /**
-* Send money to someone
+* Get address of an account
 *  
 */
-  async function sendMoney() {
-    // Validate input
-    if (receiver.length < 1) {
-      alert("Please enter a valid address")
-      return
-    }
-    console.log(Number(ethers.parseEther(amountToSend)))
+  async function getAddress() {
+
 
     try {
       setStoreLoader(true)
       const signer = await getProviderOrSigner(true);
       const smartContract = new ethers.Contract(contractAddress, abi, provider);
-      const contractWithSigner = smartContract.connect(signer);
-      console.log(amountToSend)
+      const contractWithSigneer = smartContract.connect(signer);
 
-      const writeNumTX = await contractWithSigner.transfer(receiver, ethers.parseEther(amountToSend));
-      console.log(writeNumTX)
-      const response = await writeNumTX.wait()
-      console.log(await response)
+      const txn = await contractWithSigneer.getTheAddress(currentAddress, serialNumber);
+      console.log("Signer is ", provider)
+      console.log("Serial no ", serialNumber)
+      console.log("Address gotten is", txn)
+
       setStoreLoader(false)
 
-      alert(`${amountToSend} Eth sent to ${receiver}`)
+      alert(`The address is ${txn}`)
       return
 
     } catch (error) {
       alert(error)
-      console.log(error)
       setStoreLoader(false)
       return
     }
@@ -120,24 +125,23 @@ export default function Home() {
 
 
   /**
-* Create a Wallet
+* Create an account
 *  
 */
   async function createWallet() {
-
     try {
       setStoreLoader(true)
       const signer = await getProviderOrSigner(true);
       const smartContract = new ethers.Contract(contractAddress, abi, provider);
       const contractWithSigner = smartContract.connect(signer);
 
-      const writeNumTX = await contractWithSigner.createWallet();
-      console.log(writeNumTX)
-      const response = await writeNumTX.wait()
-      console.log(await response)
+      const createAccount = await contractWithSigner.createAccount(currentAddress, serialNumber);
+      // console.log(createAccount)
+      const response = await createAccount.wait()
+      console.log(response.to)
       setStoreLoader(false)
 
-      alert(`Wallet created having your address`)
+      alert("Account created. Click 'Get account' to get the address")
       return
 
     } catch (error) {
@@ -149,25 +153,24 @@ export default function Home() {
 
 
   /**
-* Fund wallet
-*  
-*/
+ * Fund wallet
+ *  
+ */
   async function fundWallet() {
 
-    console.log(ethers.parseEther(amountToFund))
     try {
       setStoreLoader(true)
       const signer = await getProviderOrSigner(true);
       const smartContract = new ethers.Contract(contractAddress, abi, provider);
       const contractWithSigner = smartContract.connect(signer);
 
-      const writeNumTX = await contractWithSigner.fundWallet({ value: ethers.parseEther(amountToFund) });
-      console.log(writeNumTX)
-      const response = await writeNumTX.wait()
-      console.log(await response)
+      const fundWallet = await contractWithSigner.fundWallet(accountToFund, { value: ethers.parseEther(amountToFund) });
+      // console.log(fundWallet)
+      const response = await fundWallet.wait()
+      //console.log(response)
       setStoreLoader(false)
 
-      alert(`Wallet funded with ${amountToFund} ETH`)
+      alert(`Wallet funded with ${amountToFund} `)
       return
 
     } catch (error) {
@@ -181,7 +184,6 @@ export default function Home() {
    * Get balance
   */
   async function getBalance(provider) {
-
     try {
       setRetrieveLoader(true)
       const signer = await getProviderOrSigner(true);
@@ -189,17 +191,15 @@ export default function Home() {
       // initalize smartcontract with the essentials detials.
       const smartContract = new ethers.Contract(contractAddress, abi, provider);
       const contractWithSigner = smartContract.connect(signer);
-
-      console.log(contractAddress)
       // interact with the methods in smart contract
-      const responsee = await contractWithSigner.balanceOf();
+      const getBalance = await contractWithSigner.balanceOf(accountToGet);
 
-      console.log(parseInt(responsee))
-      setCurrentBalance(ethers.formatEther(responsee))
+      setCurrentBalance(ethers.formatEther(getBalance))
       setRetrieveLoader(false)
       return
     } catch (error) {
       alert(error)
+      console.log(error)
       setRetrieveLoader(false)
       return
     }
@@ -210,6 +210,7 @@ export default function Home() {
     e.preventDefault()
   }
 
+
   return (
 
     <main className="flex min-h-screen flex-col items-center justify-center p-4">
@@ -218,8 +219,18 @@ export default function Home() {
           <div className="text-2xl font-bold">Your Smart Wallet</div>
         </div>
       </div>
-      <h4 className="mt-5">Your current balance is <span className='font-bold'>{currentBalance ? currentBalance : 0}</span> </h4>
-      <button className='px-4 py-1 rounded-2xl bg-slate-300 hover:bg-slate-500 flex justify-around transition-all w-32' onClick={() => getBalance(provider)}> {retrieveLoader ? (
+      <h4 className="mt-5"> {accountToGet ? accountToGet : "Your "} current balance is <span className='font-bold'>{currentBalance ? currentBalance : 0}</span> </h4>
+
+      <input onChange={(e) => {
+        setAccountToGet(e.target.value);
+      }}
+        name={'name'} required maxLength={"100"}
+        type='text'
+        step={1}
+        className={"px-6 border-y-4 border-x-4 border-x-orange-600 py-3 mb-3 align-middle bg-slate-600 text-white rounded-lg border-solid outline-double	w-30"}
+        placeholder="Address"
+      />
+      <button className='px-4 py-1 mb-5 rounded-2xl bg-slate-300 hover:bg-slate-500 flex justify-around transition-all w-32' onClick={() => getBalance(provider)}> {retrieveLoader ? (
         <svg
           className="animate-spin m-1 h-5 w-5 text-white"
           xmlns="http://www.w3.org/2000/svg"
@@ -244,7 +255,26 @@ export default function Home() {
       <hr></hr>
 
       {/* Create wallet */}
-      <button onClick={createWallet} className='rounded-2xl mt-3 px-4 py-1 bg-slate-300 flex justify-around hover:bg-slate-500 transition-all w-32'> {storeLoader ? (
+      <div className="border-y-4 border-x-4 border-x-orange-600">
+        <form onSubmit={handleOnFormSubmit} className={"m-3"}>
+          <div className=" flex flex-col space-y-3">
+
+            <input onChange={(e) => {
+              setAccountSerialNumber(e.target.value);
+            }}
+              name={'name'} required maxLength={"10"}
+              type='number'
+              step={1}
+              className={"px-6 py-3 align-middle bg-slate-600 text-white rounded-lg border-solid outline-double	w-30"}
+              placeholder="Serial No e.g 0, 1, 2 etc"
+            />
+          </div>
+        </form>
+
+        <div className="flex flex-row align-middle items-center">
+        </div>
+      </div>
+      <button onClick={createWallet} className='rounded-2xl mt-3 mb-5 px-4 py-1 bg-slate-300 flex justify-around hover:bg-slate-500 transition-all w-32'> {storeLoader ? (
         <svg
           className="animate-spin m-1 h-5 w-5 text-white"
           xmlns="http://www.w3.org/2000/svg"
@@ -268,6 +298,50 @@ export default function Home() {
       ) : "Create a Wallet"} </button>
       <hr></hr>
 
+      {/* Get Address */}
+      <div className="border-y-4 border-x-4 border-x-orange-600">
+        <form onSubmit={handleOnFormSubmit} className={"m-3"}>
+          <div className=" flex flex-col space-y-3">
+
+            <input onChange={(e) => {
+              setAccountSerialNumber(e.target.value);
+            }}
+              name={'name'} required maxLength={"10"}
+              type='number'
+              step={1}
+              className={"px-6 py-3 align-middle bg-slate-600 text-white rounded-lg border-solid outline-double	w-30"}
+              placeholder="Serial No e.g 0, 1, 2 etc"
+            />
+          </div>
+        </form>
+
+        <div className="flex flex-row align-middle items-center">
+        </div>
+      </div>
+
+      <button onClick={getAddress} className='rounded-2xl mt-3 px-4 py-1 bg-slate-300 flex justify-around hover:bg-orange-500 transition-all w-32'> {storeLoader ? (
+        <svg
+          className="animate-spin m-1 h-5 w-5 text-white"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          ></circle>
+          <path
+            className="opacity-75 text-gray-700"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          ></path>
+        </svg>
+      ) : "Get address"} </button>
+
       {/* Fund Wallet */}
       <div className="mt-4 border-y-4 border-x-4 border-x-blue-600">
         <form onSubmit={handleOnFormSubmit} className={"m-3"}>
@@ -280,8 +354,18 @@ export default function Home() {
               type='number'
               step={0.1}
               className={"px-6 py-3 align-middle bg-slate-600 text-white rounded-lg border-solid outline-double	w-30"}
-              placeholder="Amount of ETH to fund wallet"
+              placeholder="Amount in ETH"
             />
+
+            <input onChange={(e) => {
+              setAccountToFund(e.target.value);
+            }}
+              name={'account'} required maxLength={"100"}
+              type='text'
+              className={"px-6 py-3 align-middle bg-slate-600 text-white rounded-lg border-solid outline-double	w-30"}
+              placeholder="Address to fund"
+            />
+
           </div>
         </form>
 
@@ -310,62 +394,10 @@ export default function Home() {
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
           ></path>
         </svg>
-      ) : "Fund Wallet"} </button>
+      ) : "Fund account"} </button>
       <hr className="mb-5"></hr>
 
-      {/* Transfer to someone */}
-      <div className="border-y-4 border-x-4 border-x-orange-600">
-        <form onSubmit={handleOnFormSubmit} className={"m-3"}>
-          <div className=" flex flex-col space-y-3">
 
-            {/* receiver */}
-            <input onChange={(e) => {
-              setReceiver(e.target.value);
-            }}
-              name={'name'} required maxLength={"100"}
-              type='text'
-              className={"px-6 py-3 align-middle bg-slate-600 text-white rounded-lg border-solid outline-double	w-50"}
-              placeholder="Address to send an Eth"
-            />
-
-            <input onChange={(e) => {
-              setAmountToSend(e.target.value);
-            }}
-              name={'name'} required maxLength={"10"}
-              type='number'
-              step={0.1}
-              className={"px-6 py-3 align-middle bg-slate-600 text-white rounded-lg border-solid outline-double	w-30"}
-              placeholder="Amount of ETH to transfer"
-            />
-          </div>
-        </form>
-
-        <div className="flex flex-row align-middle items-center">
-        </div>
-      </div>
-
-      <button onClick={sendMoney} className='rounded-2xl mt-3 px-4 py-1 bg-slate-300 flex justify-around hover:bg-orange-500 transition-all w-32'> {storeLoader ? (
-        <svg
-          className="animate-spin m-1 h-5 w-5 text-white"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="4"
-          ></circle>
-          <path
-            className="opacity-75 text-gray-700"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-          ></path>
-        </svg>
-      ) : "Transfer"} </button>
       <hr className="mb-5"></hr>
     </main>
   )
