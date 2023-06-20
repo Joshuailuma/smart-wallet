@@ -1,6 +1,6 @@
 # Smart Wallet
 
-A smart wallet where a user could create a wallet and transfer funds to other wallet users.
+A smart wallet where a user could create as many wallets as needed and fund them. This project demonstrates the implementation of account abstraction EIP-4337
 ## Getting Started
 
 First, run the development server:
